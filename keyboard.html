@@ -1,0 +1,43 @@
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.27.2/full/pyodide.js"></script>
+  </head>
+  <body>
+    <div id="output"></div>
+    <script type="text/javascript">
+      async function main() {
+        let pyodide = await loadPyodide();
+        function appendToOutput(text) {
+          document.getElementById("output").innerHTML += text + "<br>";
+        }
+        pyodide.globals.set("print", new Proxy(pyodide.globals.get("print"), {
+          apply(target, thisArg, args) {
+            appendToOutput(args[0]);
+            return target.apply(thisArg, args);
+          }
+        }));
+        pyodide.runPython(`
+          import js
+          def on_press(key):
+              if key == "Escape":
+                  print('Esc pressed, stopping...')
+                  js.window.stop_listener()
+              else:
+                  if len(key) == 1:
+                      print('Key pressed: ' + key)
+                  else:
+                      print('Special key pressed: ' + key)
+        `);
+        let on_press = pyodide.globals.get("on_press");
+        window.stop_listener = function() {
+          document.removeEventListener("keyDown", keyDownHandler);
+        };
+        function keyDownHandler(event) {
+          on_press(event.key);
+        }
+        document.addEventListener("keyDown", keyDownHandler);
+      }
+      main();
+    </script>
+  </body>
+</html>
